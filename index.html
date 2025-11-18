@@ -1,10 +1,9 @@
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js";
-  import { getDatabase, ref, query, limitToLast, onValue } 
-    from "https://www.gstatic.com/firebasejs/9.6.11/firebase-database.js";
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
+<script>
   // Firebase config
-  const firebaseConfig = {
+  var firebaseConfig = {
     apiKey: "AIzaSyDcAn84EYf0U26ubggBl5TOHkEFzHTiVnM",
     authDomain: "geoai-flood-control.firebaseapp.com",
     databaseURL: "https://geoai-flood-control-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -15,20 +14,18 @@
   };
 
   // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
+  firebase.initializeApp(firebaseConfig);
+  var db = firebase.database();
 
   // ------------------------------------------
   // 🔵 REALTIME LATEST VALUE
   // ------------------------------------------
-  const latestQuery = query(ref(db, "flood-data/records"), limitToLast(1));
-  onValue(latestQuery, snapshot => {
-    snapshot.forEach(child => {
-      const data = child.val();
-
+  db.ref("flood-data/records").limitToLast(1).on("value", function(snapshot) {
+    snapshot.forEach(function(child) {
+      var data = child.val();
       document.getElementById("level").innerHTML = data.level + " cm";
 
-      let date = new Date(data.timestamp * 1000);
+      var date = new Date(data.timestamp * 1000);
       document.getElementById("time").innerHTML = date.toLocaleString();
     });
   });
@@ -36,20 +33,17 @@
   // ------------------------------------------
   // 🟢 TABLE RECORDS (20 latest)
   // ------------------------------------------
-  const tableQuery = query(ref(db, "flood-data/records"), limitToLast(20));
-  onValue(tableQuery, snapshot => {
-    let table = document.getElementById("dataTable");
+  db.ref("flood-data/records").limitToLast(20).on("value", function(snapshot) {
+    var table = document.getElementById("dataTable");
     table.innerHTML = `
       <tr>
         <th>Timestamp</th>
         <th>Level (cm)</th>
       </tr>
     `;
-
-    snapshot.forEach(child => {
-      const data = child.val();
-      let date = new Date(data.timestamp * 1000);
-
+    snapshot.forEach(function(child) {
+      var data = child.val();
+      var date = new Date(data.timestamp * 1000);
       table.innerHTML += `
         <tr>
           <td>${date.toLocaleString()}</td>
