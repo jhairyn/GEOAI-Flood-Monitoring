@@ -1,136 +1,61 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Flood Monitoring Dashboard</title>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js";
+  import { getDatabase, ref, query, limitToLast, onValue } 
+    from "https://www.gstatic.com/firebasejs/9.6.11/firebase-database.js";
 
-  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-database.js"></script>
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyDcAn84EYf0U26ubggBl5TOHkEFzHTiVnM",
+    authDomain: "geoai-flood-control.firebaseapp.com",
+    databaseURL: "https://geoai-flood-control-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "geoai-flood-control",
+    storageBucket: "geoai-flood-control.firebasestorage.app",
+    messagingSenderId: "290912556912",
+    appId: "1:290912556912:web:a87b7886ea55f3b265a1b5"
+  };
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f0f6ff;
-      text-align: center;
-      padding: 20px;
-    }
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
 
-    h1 {
-      color: #003366;
-    }
+  // ------------------------------------------
+  // 🔵 REALTIME LATEST VALUE
+  // ------------------------------------------
+  const latestQuery = query(ref(db, "flood-data/records"), limitToLast(1));
+  onValue(latestQuery, snapshot => {
+    snapshot.forEach(child => {
+      const data = child.val();
 
-    .card {
-      background: white;
-      width: 350px;
-      margin: 20px auto;
-      padding: 20px;
-      border-radius: 15px;
-      box-shadow: 0px 0px 10px #c3c3c3;
-    }
+      document.getElementById("level").innerHTML = data.level + " cm";
 
-    #level {
-      font-size: 48px;
-      color: #0077cc;
-      font-weight: bold;
-    }
-
-    #time {
-      color: #444;
-      font-size: 18px;
-    }
-
-    table {
-      width: 90%;
-      margin: 20px auto;
-      border-collapse: collapse;
-    }
-
-    th, td {
-      border: 1px solid #666;
-      padding: 10px;
-    }
-
-    th {
-      background: #003366;
-      color: white;
-    }
-  </style>
-</head>
-
-<body>
-
-<h1>🌧️ Flood Monitoring Dashboard</h1>
-
-<div class="card">
-  <p>Current Water Level</p>
-  <p id="level">--</p>
-  <p id="time">Loading...</p>
-</div>
-
-<h2>📊 Recent Records</h2>
-<table id="dataTable">
-  <tr>
-    <th>Timestamp</th>
-    <th>Level (cm)</th>
-  </tr>
-</table>
-
-<script>
-  // Your Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyDcAn84EYf0U26ubggBl5TOHkEFzHTiVnM",
-  authDomain: "geoai-flood-control.firebaseapp.com",
-  databaseURL: "https://geoai-flood-control-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "geoai-flood-control",
-  storageBucket: "geoai-flood-control.firebasestorage.app",
-  messagingSenderId: "290912556912",
-  appId: "1:290912556912:web:a87b7886ea55f3b265a1b5"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-
-  // Listen to newest data in realtime
-  db.ref("flood-data/records")
-    .limitToLast(1)
-    .on("value", snapshot => {
-      snapshot.forEach(child => {
-        const data = child.val();
-        
-        document.getElementById("level").innerHTML = data.level + " cm";
-
-        let date = new Date(data.timestamp * 1000);
-        document.getElementById("time").innerHTML = date.toLocaleString();
-      });
+      let date = new Date(data.timestamp * 1000);
+      document.getElementById("time").innerHTML = date.toLocaleString();
     });
+  });
 
-  // Load table of latest 20 records
-  db.ref("flood-data/records")
-    .limitToLast(20)
-    .on("value", snapshot => {
-      let table = document.getElementById("dataTable");
-      table.innerHTML = `
+  // ------------------------------------------
+  // 🟢 TABLE RECORDS (20 latest)
+  // ------------------------------------------
+  const tableQuery = query(ref(db, "flood-data/records"), limitToLast(20));
+  onValue(tableQuery, snapshot => {
+    let table = document.getElementById("dataTable");
+    table.innerHTML = `
+      <tr>
+        <th>Timestamp</th>
+        <th>Level (cm)</th>
+      </tr>
+    `;
+
+    snapshot.forEach(child => {
+      const data = child.val();
+      let date = new Date(data.timestamp * 1000);
+
+      table.innerHTML += `
         <tr>
-          <th>Timestamp</th>
-          <th>Level (cm)</th>
+          <td>${date.toLocaleString()}</td>
+          <td>${data.level} cm</td>
         </tr>
       `;
-
-      snapshot.forEach(child => {
-        const data = child.val();
-        let date = new Date(data.timestamp * 1000);
-
-        let row = `
-          <tr>
-            <td>${date.toLocaleString()}</td>
-            <td>${data.level}</td>
-          </tr>
-        `;
-        table.innerHTML += row;
-      });
     });
-
+  });
 </script>
-
-</body>
-</html>
