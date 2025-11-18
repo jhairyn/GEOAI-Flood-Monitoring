@@ -77,7 +77,7 @@
 
 <script>
   // Your Firebase configuration
- const firebaseConfig = {
+const firebaseConfig = {
   apiKey: "AIzaSyDcAn84EYf0U26ubggBl5TOHkEFzHTiVnM",
   authDomain: "geoai-flood-control.firebaseapp.com",
   databaseURL: "https://geoai-flood-control-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -87,8 +87,8 @@
   appId: "1:290912556912:web:a87b7886ea55f3b265a1b5"
 };
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
 
   // Listen to newest data in realtime
   db.ref("flood-data/records")
