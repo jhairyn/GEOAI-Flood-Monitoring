@@ -1,8 +1,82 @@
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Flood Monitoring Dashboard</title>
+
+  <!-- Firebase v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f6ff;
+      text-align: center;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #003366;
+    }
+
+    .card {
+      background: white;
+      width: 350px;
+      margin: 20px auto;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0px 0px 10px #c3c3c3;
+    }
+
+    #level {
+      font-size: 48px;
+      color: #0077cc;
+      font-weight: bold;
+    }
+
+    #time {
+      color: #444;
+      font-size: 18px;
+    }
+
+    table {
+      width: 90%;
+      margin: 20px auto;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      border: 1px solid #666;
+      padding: 10px;
+    }
+
+    th {
+      background: #003366;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+<h1>🌧️ Flood Monitoring Dashboard</h1>
+
+<div class="card">
+  <p>Current Water Level</p>
+  <p id="level">--</p>
+  <p id="time">Loading...</p>
+</div>
+
+<h2>📊 Recent Records</h2>
+<table id="dataTable">
+  <tr>
+    <th>Timestamp</th>
+    <th>Level (cm)</th>
+  </tr>
+</table>
 
 <script>
-  // Firebase config
+  // Firebase configuration
   var firebaseConfig = {
     apiKey: "AIzaSyDcAn84EYf0U26ubggBl5TOHkEFzHTiVnM",
     authDomain: "geoai-flood-control.firebaseapp.com",
@@ -17,9 +91,9 @@
   firebase.initializeApp(firebaseConfig);
   var db = firebase.database();
 
-  // ------------------------------------------
-  // 🔵 REALTIME LATEST VALUE
-  // ------------------------------------------
+  // -------------------------------
+  // 🔵 Realtime Latest Water Level
+  // -------------------------------
   db.ref("flood-data/records").limitToLast(1).on("value", function(snapshot) {
     snapshot.forEach(function(child) {
       var data = child.val();
@@ -30,9 +104,9 @@
     });
   });
 
-  // ------------------------------------------
-  // 🟢 TABLE RECORDS (20 latest)
-  // ------------------------------------------
+  // -------------------------------
+  // 🟢 Last 20 Records Table
+  // -------------------------------
   db.ref("flood-data/records").limitToLast(20).on("value", function(snapshot) {
     var table = document.getElementById("dataTable");
     table.innerHTML = `
@@ -41,6 +115,7 @@
         <th>Level (cm)</th>
       </tr>
     `;
+
     snapshot.forEach(function(child) {
       var data = child.val();
       var date = new Date(data.timestamp * 1000);
@@ -53,3 +128,6 @@
     });
   });
 </script>
+
+</body>
+</html>
