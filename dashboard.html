@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Flood Monitoring Dashboard</title>
+
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-database.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f6ff;
+      text-align: center;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #003366;
+    }
+
+    .card {
+      background: white;
+      width: 350px;
+      margin: 20px auto;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0px 0px 10px #c3c3c3;
+    }
+
+    #level {
+      font-size: 48px;
+      color: #0077cc;
+      font-weight: bold;
+    }
+
+    #time {
+      color: #444;
+      font-size: 18px;
+    }
+
+    table {
+      width: 90%;
+      margin: 20px auto;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      border: 1px solid #666;
+      padding: 10px;
+    }
+
+    th {
+      background: #003366;
+      color: white;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>🌧️ Flood Monitoring Dashboard</h1>
+
+<div class="card">
+  <p>Current Water Level</p>
+  <p id="level">--</p>
+  <p id="time">Loading...</p>
+</div>
+
+<h2>📊 Recent Records</h2>
+<table id="dataTable">
+  <tr>
+    <th>Timestamp</th>
+    <th>Level (cm)</th>
+  </tr>
+</table>
+
+<script>
+  // Your Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyDcAn84EYf0U26ubggBl5TOHkEFzHTiVnM",
+    authDomain: "geoai-flood-control-default-rtdb.firebaseapp.com",
+    databaseURL: "https://geoai-flood-control-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "geoai-flood-control-default-rtdb",
+    storageBucket: "geoai-flood-control-default-rtdb.appspot.com",
+    messagingSenderId: "485399052606",
+    appId: "1:485399052606:web:b44c8bbd70000d298d0d3d"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // Listen to newest data in realtime
+  db.ref("flood-data/records")
+    .limitToLast(1)
+    .on("value", snapshot => {
+      snapshot.forEach(child => {
+        const data = child.val();
+        
+        document.getElementById("level").innerHTML = data.level + " cm";
+
+        let date = new Date(data.timestamp * 1000);
+        document.getElementById("time").innerHTML = date.toLocaleString();
+      });
+    });
+
+  // Load table of latest 20 records
+  db.ref("flood-data/records")
+    .limitToLast(20)
+    .on("value", snapshot => {
+      let table = document.getElementById("dataTable");
+      table.innerHTML = `
+        <tr>
+          <th>Timestamp</th>
+          <th>Level (cm)</th>
+        </tr>
+      `;
+
+      snapshot.forEach(child => {
+        const data = child.val();
+        let date = new Date(data.timestamp * 1000);
+
+        let row = `
+          <tr>
+            <td>${date.toLocaleString()}</td>
+            <td>${data.level}</td>
+          </tr>
+        `;
+        table.innerHTML += row;
+      });
+    });
+
+</script>
+
+</body>
+</html>
