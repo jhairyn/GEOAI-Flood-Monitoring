@@ -50,6 +50,41 @@
       margin-top: 10px;
     }
 
+    /* ALERT BOX STYLE */
+    #alertBox {
+      width: 90%;
+      margin: 20px auto;
+      padding: 15px;
+      font-size: 26px;
+      font-weight: bold;
+      border-radius: 12px;
+      color: white;
+      animation: pulse 1.5s infinite;
+      display: none; /* hidden until alert exists */
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    /* Graph container side-by-side */
+    .graph-container {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin-top: 30px;
+    }
+
+    .graph-box {
+      width: 45%;
+      background: white;
+      padding: 15px;
+      border-radius: 15px;
+      box-shadow: 0px 0px 10px #c3c3c3;
+    }
+
     table {
       width: 95%;
       margin: 20px auto;
@@ -65,27 +100,19 @@
       background: #003366;
       color: white;
     }
-
-    /* Graph container: side-by-side */
-    .graph-container {
-      display: flex;
-      justify-content: center;
-      gap: 30px;
-      margin-top: 30px;
-    }
-
-    .graph-box {
-      width: 45%;
-      background: white;
-      padding: 15px;
-      border-radius: 15px;
-      box-shadow: 0px 0px 10px #c3c3c3;
-    }
   </style>
 </head>
 <body>
 
 <h1>🌧️ Flood Monitoring Dashboard</h1>
+
+<!-- FLOOD ALERT BOX -->
+<div id="alertBox"></div>
+
+<!-- Alarm Sound -->
+<audio id="alarmSound">
+  <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" type="audio/ogg">
+</audio>
 
 <div class="card">
   <p>Current Water Level</p>
@@ -99,21 +126,17 @@
   <p id="time">Loading...</p>
 </div>
 
-<!-- =============== GRAPHS =============== -->
+<!-- Graphs -->
 <div class="graph-container">
-
-  <!-- Water Level graph -->
   <div class="graph-box">
     <h3>Water Level (%)</h3>
     <canvas id="waterChart"></canvas>
   </div>
 
-  <!-- Rain Intensity graph -->
   <div class="graph-box">
     <h3>Rain Intensity (%)</h3>
     <canvas id="rainChart"></canvas>
   </div>
-
 </div>
 
 <h2>📊 Recent Records</h2>
@@ -140,10 +163,6 @@
 
   firebase.initializeApp(firebaseConfig);
   var db = firebase.database();
-
-  // =======================================================
-  //   CHART SETUP
-  // =======================================================
 
   const waterChartCtx = document.getElementById("waterChart").getContext("2d");
   const rainChartCtx = document.getElementById("rainChart").getContext("2d");
@@ -172,15 +191,49 @@
     }
   });
 
-  // =======================================================
-  //   REALTIME LIVE DATA
-  // =======================================================
+  // ---------------------------------------------
+  // FLOOD ALERT LOGIC
+  // ---------------------------------------------
+  function updateFloodAlert(level) {
+    let alertBox = document.getElementById("alertBox");
+    let alarm = document.getElementById("alarmSound");
+
+    alertBox.style.display = "block"; 
+
+    if (level < 40) {
+      alertBox.style.background = "green";
+      alertBox.innerHTML = "SAFE: Water level normal.";
+      alarm.pause();
+      alarm.currentTime = 0;
+    }
+    else if (level < 60) {
+      alertBox.style.background = "yellow";
+      alertBox.style.color = "black";
+      alertBox.innerHTML = "ADVISORY: Stay alert.";
+      alarm.pause();
+      alarm.currentTime = 0;
+    }
+    else if (level < 80) {
+      alertBox.style.background = "orange";
+      alertBox.innerHTML = "WARNING: Water rising!";
+      alarm.pause();
+      alarm.currentTime = 0;
+    }
+    else {
+      alertBox.style.background = "red";
+      alertBox.innerHTML = "CRITICAL: Possible flooding!";
+      alarm.play();
+    }
+  }
+
+  // ---------------------------------------------
+  // REALTIME LIVE VALUES
+  // ---------------------------------------------
   db.ref("flood-data/records").limitToLast(1).on("value", function(snapshot) {
     snapshot.forEach(function(child) {
       var data = child.val();
 
-      // Display values
-      document.getElementById("level").innerHTML = 
+      document.getElementById("level").innerHTML =
         "Distance: " + data.distance_m.toFixed(2) + " m";
 
       document.getElementById("height").innerHTML =
@@ -192,18 +245,8 @@
       document.getElementById("rainNow").innerHTML =
         data.rain_intensity + "%";
 
-      // Water Level color
-      let p = data.water_percentage;
-      if (p < 40) document.getElementById("percentage").style.color = "green";
-      else if (p < 70) document.getElementById("percentage").style.color = "orange";
-      else document.getElementById("percentage").style.color = "red";
-
-      // Rain color
-      let r = data.rain_intensity;
-      if (r < 20) document.getElementById("rainNow").style.color = "blue";
-      else if (r < 50) document.getElementById("rainNow").style.color = "green";
-      else if (r < 80) document.getElementById("rainNow").style.color = "orange";
-      else document.getElementById("rainNow").style.color = "red";
+      // Flood Alert System Trigger
+      updateFloodAlert(data.water_percentage);
 
       // Time
       var date = new Date(data.timestamp * 1000);
@@ -211,9 +254,9 @@
     });
   });
 
-  // =======================================================
-  //   GRAPH + TABLE (Last 20 Records)
-  // =======================================================
+  // ---------------------------------------------
+  // LAST 20 RECORDS (Graph + Table)
+  // ---------------------------------------------
   db.ref("flood-data/records").limitToLast(20).on("value", function(snapshot) {
     var table = document.getElementById("dataTable");
 
@@ -237,7 +280,6 @@
       var date = new Date(data.timestamp * 1000);
       var timeStr = date.toLocaleTimeString();
 
-      // Table
       table.innerHTML += `
         <tr>
           <td>${date.toLocaleString()}</td>
@@ -247,7 +289,6 @@
         </tr>
       `;
 
-      // Graph data
       waterChart.data.labels.push(timeStr);
       waterChart.data.datasets[0].data.push(data.water_percentage);
 
