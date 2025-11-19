@@ -71,7 +71,7 @@
 <table id="dataTable">
   <tr>
     <th>Timestamp</th>
-    <th>Level (cm)</th>
+    <th>Level (m)</th>
   </tr>
 </table>
 
@@ -97,7 +97,7 @@
   db.ref("flood-data/records").limitToLast(1).on("value", function(snapshot) {
     snapshot.forEach(function(child) {
       var data = child.val();
-      document.getElementById("level").innerHTML = data.level + " cm";
+      document.getElementById("level").innerHTML = data.level_m.toFixed(2) + " m";
 
       var date = new Date(data.timestamp * 1000);
       document.getElementById("time").innerHTML = date.toLocaleString();
@@ -112,7 +112,7 @@
     table.innerHTML = `
       <tr>
         <th>Timestamp</th>
-        <th>Level (cm)</th>
+        <th>Level (m)</th>
       </tr>
     `;
 
@@ -122,7 +122,7 @@
       table.innerHTML += `
         <tr>
           <td>${date.toLocaleString()}</td>
-          <td>${data.level} cm</td>
+          <td>${data.level_m.toFixed(2)} m</td>
         </tr>
       `;
     });
@@ -131,3 +131,4 @@
 
 </body>
 </html>
+
