@@ -8,6 +8,9 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -62,6 +65,17 @@
       background: #003366;
       color: white;
     }
+
+    /* Graph container */
+    #graphContainer {
+      width: 90%;
+      max-width: 900px;
+      margin: 30px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 0 10px #c3c3c3;
+    }
   </style>
 </head>
 <body>
@@ -74,6 +88,12 @@
   <p id="height">--</p>
   <p id="percentage">--</p>
   <p id="time">Loading...</p>
+</div>
+
+<!-- 📈 GRAPH CONTAINER -->
+<div id="graphContainer">
+  <h2>📈 Water Level History (Last 20 Records)</h2>
+  <canvas id="waterChart"></canvas>
 </div>
 
 <h2>📊 Recent Records</h2>
@@ -100,9 +120,9 @@
   firebase.initializeApp(firebaseConfig);
   var db = firebase.database();
 
-  // -----------------------------------------
-  // 🔵 REALTIME LATEST WATER DATA
-  // -----------------------------------------
+  // ---------------------------------------------------
+  // 🔵 LATEST DATA DISPLAY
+  // ---------------------------------------------------
   db.ref("flood-data/records").limitToLast(1).on("value", function(snapshot) {
     snapshot.forEach(function(child) {
       var data = child.val();
@@ -116,21 +136,63 @@
       document.getElementById("percentage").innerHTML =
         "Water Level: " + data.water_percentage.toFixed(1) + "%";
 
-      // Color alert
       let p = data.water_percentage;
       if (p < 40) document.getElementById("percentage").style.color = "green";
       else if (p < 70) document.getElementById("percentage").style.color = "orange";
       else document.getElementById("percentage").style.color = "red";
 
-      // Timestamp
       var date = new Date(data.timestamp * 1000);
       document.getElementById("time").innerHTML = date.toLocaleString();
     });
   });
 
-  // -----------------------------------------
-  // 🟢 LAST 20 RECORDS TABLE
-  // -----------------------------------------
+  // ---------------------------------------------------
+  // 📈 CHART.JS - REALTIME GRAPH
+  // ---------------------------------------------------
+  const ctx = document.getElementById("waterChart").getContext("2d");
+
+  const waterChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: [],
+      datasets: [{
+        label: "Water Height (m)",
+        data: [],
+        borderColor: "blue",
+        borderWidth: 2,
+        fill: false,
+        tension: 0.2
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { title: { display: true, text: "Time" }},
+        y: { title: { display: true, text: "Height (m)" }}
+      }
+    }
+  });
+
+  // Fetch last 20 records for graph
+  db.ref("flood-data/records").limitToLast(20).on("value", function(snapshot) {
+
+    waterChart.data.labels = [];
+    waterChart.data.datasets[0].data = [];
+
+    snapshot.forEach(function(child) {
+      var d = child.val();
+      var date = new Date(d.timestamp * 1000).toLocaleTimeString();
+
+      waterChart.data.labels.push(date);
+      waterChart.data.datasets[0].data.push(d.water_height_m);
+    });
+
+    waterChart.update();
+  });
+
+  // ---------------------------------------------------
+  // 🟢 TABLE (Last 20 records)
+  // ---------------------------------------------------
   db.ref("flood-data/records").limitToLast(20).on("value", function(snapshot) {
     var table = document.getElementById("dataTable");
 
