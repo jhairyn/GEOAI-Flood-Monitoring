@@ -22,26 +22,33 @@
 
     .card {
       background: white;
-      width: 350px;
+      width: 380px;
       margin: 20px auto;
       padding: 20px;
       border-radius: 15px;
       box-shadow: 0px 0px 10px #c3c3c3;
     }
 
-    #level {
-      font-size: 48px;
-      color: #0077cc;
+    #level, #percentage {
+      font-size: 42px;
       font-weight: bold;
+      margin: 5px 0;
+    }
+
+    #height {
+      font-size: 28px;
+      color: #444;
+      margin: 5px 0;
     }
 
     #time {
-      color: #444;
+      color: #555;
       font-size: 18px;
+      margin-top: 10px;
     }
 
     table {
-      width: 90%;
+      width: 95%;
       margin: 20px auto;
       border-collapse: collapse;
     }
@@ -64,6 +71,8 @@
 <div class="card">
   <p>Current Water Level</p>
   <p id="level">--</p>
+  <p id="height">--</p>
+  <p id="percentage">--</p>
   <p id="time">Loading...</p>
 </div>
 
@@ -71,7 +80,8 @@
 <table id="dataTable">
   <tr>
     <th>Timestamp</th>
-    <th>Level (m)</th>
+    <th>Water Height (m)</th>
+    <th>Percentage (%)</th>
   </tr>
 </table>
 
@@ -87,42 +97,60 @@
     appId: "1:290912556912:web:a87b7886ea55f3b265a1b5"
   };
 
-  // Initialize Firebase
   firebase.initializeApp(firebaseConfig);
   var db = firebase.database();
 
-  // -------------------------------
-  // 🔵 Realtime Latest Water Level
-  // -------------------------------
+  // -----------------------------------------
+  // 🔵 REALTIME LATEST WATER DATA
+  // -----------------------------------------
   db.ref("flood-data/records").limitToLast(1).on("value", function(snapshot) {
     snapshot.forEach(function(child) {
       var data = child.val();
-      document.getElementById("level").innerHTML = data.level_m.toFixed(2) + " m";
 
+      document.getElementById("level").innerHTML =
+        "Distance: " + data.distance_m.toFixed(2) + " m";
+
+      document.getElementById("height").innerHTML =
+        "Height: " + data.water_height_m.toFixed(2) + " m";
+
+      document.getElementById("percentage").innerHTML =
+        "Water Level: " + data.water_percentage.toFixed(1) + "%";
+
+      // Color alert
+      let p = data.water_percentage;
+      if (p < 40) document.getElementById("percentage").style.color = "green";
+      else if (p < 70) document.getElementById("percentage").style.color = "orange";
+      else document.getElementById("percentage").style.color = "red";
+
+      // Timestamp
       var date = new Date(data.timestamp * 1000);
       document.getElementById("time").innerHTML = date.toLocaleString();
     });
   });
 
-  // -------------------------------
-  // 🟢 Last 20 Records Table
-  // -------------------------------
+  // -----------------------------------------
+  // 🟢 LAST 20 RECORDS TABLE
+  // -----------------------------------------
   db.ref("flood-data/records").limitToLast(20).on("value", function(snapshot) {
     var table = document.getElementById("dataTable");
+
     table.innerHTML = `
       <tr>
         <th>Timestamp</th>
-        <th>Level (m)</th>
+        <th>Water Height (m)</th>
+        <th>Percentage (%)</th>
       </tr>
     `;
 
     snapshot.forEach(function(child) {
       var data = child.val();
       var date = new Date(data.timestamp * 1000);
+
       table.innerHTML += `
         <tr>
           <td>${date.toLocaleString()}</td>
-          <td>${data.level_m.toFixed(2)} m</td>
+          <td>${data.water_height_m.toFixed(2)}</td>
+          <td>${data.water_percentage.toFixed(1)}%</td>
         </tr>
       `;
     });
@@ -131,4 +159,3 @@
 
 </body>
 </html>
-
