@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Flood Monitoring Dashboard</title>
+
+  <!-- Firebase v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script> 
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f6ff;
+      text-align: center;
+      padding: 20px;
+    }
+
+    h1 { color: #003366; }
+
+    .card {
+      background: white;
+      width: 380px;
+      margin: 20px auto;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0px 0px 10px #c3c3c3;
+    }
+
+    #level, #percentage, #rainNow, #rainClass {
+      font-size: 42px;
+      font-weight: bold;
+      margin: 5px 0;
+    }
+
+    #height {
+      font-size: 28px;
+      color: #444;
+      margin: 5px 0;
+    }
+
+    #time {
+      color: #555;
+      font-size: 18px;
+      margin-top: 10px;
+    }
+
+    #alertBox {
+      width: 90%;
+      margin: 20px auto;
+      padding: 15px;
+      font-size: 26px;
+      font-weight: bold;
+      border-radius: 12px;
+      color: white;
+      animation: pulse 1.5s infinite;
+      display: none;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    .graph-container {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin-top: 30px;
+    }
+
+    .graph-box {
+      width: 45%;
+      background: white;
+      padding: 15px;
+      border-radius: 15px;
+      box-shadow: 0px 0px 10px #c3c3c3;
+    }
+
+    table {
+      width: 95%;
+      margin: 20px auto;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      border: 1px solid #666;
+      padding: 10px;
+    }
+
+    th { background: #003366; color: white; }
+  </style>
+</head>
+<body>
+
+<h1>🌧️ Flood Monitoring Dashboard</h1>
+
+<!-- FLOOD ALERT -->
+<div id="alertBox"></div>
+<audio id="alarmSound">
+  <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" type="audio/ogg">
+</audio>
+
+<div class="card">
+  <p>Current Water Level</p>
+  <p id="level">--</p>
+  <p id="height">--</p>
+  <p id="percentage">--</p>
+
+  <p>Rain Intensity</p>
+  <p id="rainNow">--</p>
+  <p id="rainClass">--</p>
+
+  <p id="time">Loading...</p>
+</div>
+
+<!-- GRAPHS -->
+<div class="graph-container">
+  <div class="graph-box">
+    <h3>Water Level (%)</h3>
+    <canvas id="waterChart"></canvas>
+  </div>
+
+  <div class="graph-box">
+    <h3>Rain Intensity (%)</h3>
+    <canvas id="rainChart"></canvas>
+  </div>
+</div>
+
+<h2>📊 Recent Records</h2>
+<table id="dataTable">
+  <tr>
+    <th>Timestamp</th>
+    <th>Water Height (m)</th>
+    <th>Level (%)</th>
+    <th>Rain (%)</th>
+    <th>Rain Class</th>
+  </tr>
+</table>
+
+<script>
+  // Firebase config
+  var firebaseConfig = {
+    apiKey: "AIzaSyDcAn84EYf0U26ubggBl5TOHkEFzHTiVnM",
+    authDomain: "geoai-flood-control.firebaseapp.com",
+    databaseURL: "https://geoai-flood-control-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "geoai-flood-control",
+    storageBucket: "geoai-flood-control.firebasestorage.app",
+    messagingSenderId: "290912556912",
+    appId: "1:290912556912:web:a87b7886ea55f3b265a1b5"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  var db = firebase.database();
+
+  // Charts
+  const waterChartCtx = document.getElementById("waterChart").getContext("2d");
+  const rainChartCtx = document.getElementById("rainChart").getContext("2d");
+
+  let waterChart = new Chart(waterChartCtx, {
+    type: "line",
+    data: { labels: [], datasets: [{ label: "Water Level (%)", data: [], borderWidth: 2 }] }
+  });
+
+  let rainChart = new Chart(rainChartCtx, {
+    type: "line",
+    data: { labels: [], datasets: [{
+      label: "Rain Intensity (%)",
+      data: [],
+      borderWidth: 2,
+      borderColor: "#0077ff",
+      fill: false,
+      pointBackgroundColor: []
+    }] },
+    options: {
+      responsive: true,
+      scales: { y: { beginAtZero: true, max: 100 } }
+    }
+  });
+
+  // Flood Alert System
+  function updateFloodAlert(level){
+    let alertBox = document.getElementById("alertBox");
+    let alarm = document.getElementById("alarmSound");
+    alertBox.style.display = "block";
+
+    if(level<40){
+      alertBox.style.background = "green"; alertBox.innerHTML="SAFE: Water level normal."; alarm.pause(); alarm.currentTime=0;
+    } else if(level<60){
+      alertBox.style.background = "yellow"; alertBox.style.color="black"; alertBox.innerHTML="ADVISORY: Stay alert."; alarm.pause(); alarm.currentTime=0;
+    } else if(level<80){
+      alertBox.style.background = "orange"; alertBox.innerHTML="WARNING: Water rising!"; alarm.pause(); alarm.currentTime=0;
+    } else{
+      alertBox.style.background = "red"; alertBox.innerHTML="CRITICAL: Possible flooding!"; alarm.play();
+    }
+  }
+
+  // Rain classification colors
+  function rainClassColor(cls){
+    switch(cls){
+      case "No Rain": return "blue";
+      case "Light Rain": return "green";
+      case "Moderate Rain": return "orange";
+      case "Heavy Rain": return "red";
+      case "Torrential Rain": return "purple";
+      default: return "black";
+    }
+  }
+
+  // Rain point colors for graph
+  function rainPointColor(cls){ return rainClassColor(cls); }
+
+  // Realtime latest record
+  db.ref("flood-data/records").limitToLast(1).on("value", function(snapshot){
+    snapshot.forEach(function(child){
+      let data = child.val();
+
+      document.getElementById("level").innerHTML = "Distance: "+data.distance_m.toFixed(2)+" m";
+      document.getElementById("height").innerHTML = "Height: "+data.water_height_m.toFixed(2)+" m";
+      document.getElementById("percentage").innerHTML = data.water_percentage.toFixed(1)+"%";
+
+      document.getElementById("rainNow").innerHTML = data.rain_intensity+"%";
+      document.getElementById("rainClass").innerHTML = data.rain_class;
+      document.getElementById("rainClass").style.color = rainClassColor(data.rain_class);
+
+      updateFloodAlert(data.water_percentage);
+
+      let date = new Date(data.timestamp*1000);
+      document.getElementById("time").innerHTML = date.toLocaleString();
+    });
+  });
+
+  // Last 20 records
+  db.ref("flood-data/records").limitToLast(20).on("value", function(snapshot){
+    let table = document.getElementById("dataTable");
+    table.innerHTML = `
+      <tr>
+        <th>Timestamp</th>
+        <th>Water Height (m)</th>
+        <th>Level (%)</th>
+        <th>Rain (%)</th>
+        <th>Rain Class</th>
+      </tr>
+    `;
+
+    waterChart.data.labels = [];
+    waterChart.data.datasets[0].data = [];
+
+    rainChart.data.labels = [];
+    rainChart.data.datasets[0].data = [];
+    rainChart.data.datasets[0].pointBackgroundColor = [];
+
+    snapshot.forEach(function(child){
+      let data = child.val();
+      let date = new Date(data.timestamp*1000);
+      let timeStr = date.toLocaleTimeString();
+
+      table.innerHTML += `
+        <tr>
+          <td>${date.toLocaleString()}</td>
+          <td>${data.water_height_m.toFixed(2)}</td>
+          <td>${data.water_percentage.toFixed(1)}%</td>
+          <td>${data.rain_intensity}%</td>
+          <td style="color:${rainClassColor(data.rain_class)}">${data.rain_class}</td>
+        </tr>
+      `;
+
+      // Graph data
+      waterChart.data.labels.push(timeStr);
+      waterChart.data.datasets[0].data.push(data.water_percentage);
+
+      rainChart.data.labels.push(timeStr);
+      rainChart.data.datasets[0].data.push(data.rain_intensity);
+      rainChart.data.datasets[0].pointBackgroundColor.push(rainPointColor(data.rain_class));
+    });
+
+    waterChart.update();
+    rainChart.update();
+  });
+
+</script>
+</body>
+</html>
