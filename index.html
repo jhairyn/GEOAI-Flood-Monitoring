@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Flood Monitoring Dashboard with Prediction</title>
+  <title>Flood Monitoring Dashboard with Forecast</title>
 
   <!-- Firebase v8 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -15,14 +15,14 @@
     body {
       font-family: Arial, sans-serif;
       background: #f0f6ff;
-      padding: 20px;
       text-align: center;
+      padding: 20px;
     }
 
     h1 { color: #003366; }
 
-    /* Container for side-by-side layout */
-    .dashboard-container {
+    /* Side-by-side container for top section */
+    .top-container {
       display: flex;
       justify-content: center;
       gap: 30px;
@@ -30,7 +30,7 @@
       margin-bottom: 40px;
     }
 
-    /* Current Water Level Card */
+    /* Enlarged Current Water Level card */
     .card {
       background: white;
       width: 480px;
@@ -38,8 +38,6 @@
       padding: 30px;
       border-radius: 15px;
       box-shadow: 0px 0px 15px #c3c3c3;
-      font-size: 18px;
-      flex: 1;
     }
 
     #level, #percentage, #rainNow, #rainClass {
@@ -60,15 +58,14 @@
       margin-top: 10px;
     }
 
-    /* Water Level + Forecast Card */
-    .graph-box {
+    /* Forecast container */
+    .forecast-card {
       background: white;
-      width: 600px;
+      width: 480px;
       min-width: 300px;
-      padding: 25px;
+      padding: 30px;
       border-radius: 15px;
       box-shadow: 0px 0px 15px #c3c3c3;
-      flex: 1;
     }
 
     #predictionPanel {
@@ -83,17 +80,28 @@
     #predictionPanel p { margin: 6px 0; }
     #predictionPanel strong { font-size: 20px; }
 
-    #waterChart {
-      height: 400px !important;
+    /* Graph containers */
+    .graph-container {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin-top: 30px;
+      flex-wrap: wrap;
     }
 
-    #rainChart {
-      height: 300px !important;
+    .graph-box {
+      width: 45%;
+      background: white;
+      padding: 15px;
+      border-radius: 15px;
+      box-shadow: 0px 0px 10px #c3c3c3;
     }
+
+    #waterChart { height: 250px !important; }
+    #rainChart { height: 250px !important; }
 
     #alertBox {
       width: 90%;
-      max-width: 1200px;
       margin: 20px auto;
       padding: 15px;
       font-size: 26px;
@@ -114,7 +122,6 @@
       width: 95%;
       margin: 20px auto;
       border-collapse: collapse;
-      font-size: 14px;
     }
 
     th, td {
@@ -136,8 +143,8 @@
   <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" type="audio/ogg">
 </audio>
 
-<!-- Side-by-side container -->
-<div class="dashboard-container">
+<!-- Top section: side by side -->
+<div class="top-container">
   <!-- Current Water Level -->
   <div class="card">
     <p>Current Water Level</p>
@@ -152,13 +159,10 @@
     <p id="time">Loading...</p>
   </div>
 
-  <!-- Water Level + Forecast -->
-  <div class="graph-box">
-    <h3 style="margin-bottom:10px;">Water Level (%) & Forecast</h3>
-    <canvas id="waterChart"></canvas>
-
+  <!-- Forecast -->
+  <div class="forecast-card">
+    <h3>⏳ Forecast (next ~10 minutes)</h3>
     <div id="predictionPanel">
-      <h3 style="margin:0 0 10px 0;">⏳ Forecast (next ~10 minutes)</h3>
       <p><strong>Predicted Water Level:</strong> <span id="predictedHeight">--</span></p>
       <p><strong>Predicted Rain Condition:</strong> <span id="predictedRain">--</span></p>
       <p><strong>Flood Risk Level:</strong> <span id="predictedRisk">--</span></p>
@@ -166,10 +170,17 @@
   </div>
 </div>
 
-<!-- Rain Graph -->
-<div class="graph-box">
-  <h3>Rain Intensity (%)</h3>
-  <canvas id="rainChart"></canvas>
+<!-- Graphs -->
+<div class="graph-container">
+  <div class="graph-box">
+    <h3>Water Level (%)</h3>
+    <canvas id="waterChart"></canvas>
+  </div>
+
+  <div class="graph-box">
+    <h3>Rain Intensity (%)</h3>
+    <canvas id="rainChart"></canvas>
+  </div>
 </div>
 
 <h2>📊 Recent Records</h2>
@@ -184,6 +195,7 @@
 </table>
 
 <script>
+  // Firebase config
   var firebaseConfig = {
     apiKey: "AIzaSyDcAn84EYf0U26ubggBl5TOHkEFzHTiVnM",
     authDomain: "geoai-flood-control.firebaseapp.com",
