@@ -21,23 +21,26 @@
 
     h1 { color: #003366; }
 
+    /* Main card */
     .card {
       background: white;
-      width: 380px;
+      width: 500px;
+      max-width: 90%;
       margin: 20px auto;
-      padding: 20px;
+      padding: 25px;
       border-radius: 15px;
-      box-shadow: 0px 0px 10px #c3c3c3;
+      box-shadow: 0px 0px 12px #c3c3c3;
+      font-size: 18px;
     }
 
     #level, #percentage, #rainNow, #rainClass {
-      font-size: 42px;
+      font-size: 48px;
       font-weight: bold;
       margin: 5px 0;
     }
 
     #height {
-      font-size: 28px;
+      font-size: 32px;
       color: #444;
       margin: 5px 0;
     }
@@ -50,6 +53,7 @@
 
     #alertBox {
       width: 90%;
+      max-width: 1000px;
       margin: 20px auto;
       padding: 15px;
       font-size: 26px;
@@ -75,43 +79,49 @@
     }
 
     .graph-box {
-      width: 45%;
-      min-width: 300px;
+      width: 90%;
+      max-width: 1000px;
       background: white;
-      padding: 15px;
+      padding: 25px;
       border-radius: 15px;
-      box-shadow: 0px 0px 10px #c3c3c3;
+      box-shadow: 0px 0px 12px #c3c3c3;
+      margin: 20px auto;
+    }
+
+    #predictionPanel {
+      margin-top: 20px;
+      padding: 18px;
+      border-radius: 12px;
+      background: #f9f9f9;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      font-size: 18px;
+    }
+
+    #predictionPanel p { margin: 6px 0; font-size: 18px; }
+    #predictionPanel strong { font-size: 20px; }
+
+    #waterChart {
+      height: 400px !important;
+    }
+
+    #rainChart {
+      height: 300px !important;
     }
 
     table {
       width: 95%;
       margin: 20px auto;
       border-collapse: collapse;
+      font-size: 14px;
     }
 
     th, td {
       border: 1px solid #666;
       padding: 10px;
-      font-size: 14px;
       text-align: center;
     }
 
     th { background: #003366; color: white; }
-
-    /* Prediction box styling */
-    #predictionPanel {
-      margin-top: 18px;
-      padding: 12px;
-      border-radius: 10px;
-      background: #ffffff;
-      width: 380px;
-      margin-left: auto;
-      margin-right: auto;
-      box-shadow: 0 0 8px rgba(0,0,0,0.08);
-    }
-
-    #predictionPanel p { margin: 6px 0; font-size: 18px; }
-    #predictionPanel strong { font-size: 20px; }
   </style>
 </head>
 <body>
@@ -124,6 +134,7 @@
   <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" type="audio/ogg">
 </audio>
 
+<!-- Main Dashboard Card -->
 <div class="card">
   <p>Current Water Level</p>
   <p id="level">--</p>
@@ -137,25 +148,24 @@
   <p id="time">Loading...</p>
 </div>
 
-<!-- PREDICTION BOX -->
-<div id="predictionPanel">
-  <h3 style="margin:0 0 6px 0;">⏳ Forecast (next ~10 minutes)</h3>
-  <p><strong>Predicted Water Level:</strong> <span id="predictedHeight">--</span></p>
-  <p><strong>Predicted Rain Condition:</strong> <span id="predictedRain">--</span></p>
-  <p><strong>Flood Risk Level:</strong> <span id="predictedRisk">--</span></p>
+<!-- ENLARGED WATER LEVEL + FORECAST CONTAINER -->
+<div class="graph-box">
+  <h3 style="margin-bottom:10px;">Water Level (%) & Forecast</h3>
+  <canvas id="waterChart"></canvas>
+
+  <!-- PREDICTION BOX -->
+  <div id="predictionPanel">
+    <h3 style="margin:0 0 10px 0;">⏳ Forecast (next ~10 minutes)</h3>
+    <p><strong>Predicted Water Level:</strong> <span id="predictedHeight">--</span></p>
+    <p><strong>Predicted Rain Condition:</strong> <span id="predictedRain">--</span></p>
+    <p><strong>Flood Risk Level:</strong> <span id="predictedRisk">--</span></p>
+  </div>
 </div>
 
-<!-- GRAPHS -->
-<div class="graph-container">
-  <div class="graph-box">
-    <h3>Water Level (%)</h3>
-    <canvas id="waterChart"></canvas>
-  </div>
-
-  <div class="graph-box">
-    <h3>Rain Intensity (%)</h3>
-    <canvas id="rainChart"></canvas>
-  </div>
+<!-- Rain Graph -->
+<div class="graph-box">
+  <h3>Rain Intensity (%)</h3>
+  <canvas id="rainChart"></canvas>
 </div>
 
 <h2>📊 Recent Records</h2>
@@ -170,9 +180,7 @@
 </table>
 
 <script>
-  // ---------------------------
-  // Firebase config - update if needed
-  // ---------------------------
+  // Firebase config
   var firebaseConfig = {
     apiKey: "AIzaSyDcAn84EYf0U26ubggBl5TOHkEFzHTiVnM",
     authDomain: "geoai-flood-control.firebaseapp.com",
@@ -185,9 +193,7 @@
   firebase.initializeApp(firebaseConfig);
   var db = firebase.database();
 
-  // ---------------------------
-  // Chart setup
-  // ---------------------------
+  // Charts
   const waterChartCtx = document.getElementById("waterChart").getContext("2d");
   const rainChartCtx = document.getElementById("rainChart").getContext("2d");
 
@@ -197,35 +203,18 @@
       labels: [],
       datasets: [
         { label: "Water Level (%)", data: [], borderWidth: 2, borderColor: "#1e88e5", fill: false },
-        // dataset 1 will be the forecast connection (created/updated later)
         { label: "Forecast", data: [], borderWidth: 2, borderColor: "#d81b60", fill: false, borderDash: [6,4], pointRadius: 6 }
       ]
     },
-    options: {
-      responsive: true,
-      scales: { y: { beginAtZero: true, max: 100 } }
-    }
+    options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } }
   });
 
   let rainChart = new Chart(rainChartCtx, {
     type: "line",
-    data: { labels: [], datasets: [{
-      label: "Rain Intensity (%)",
-      data: [],
-      borderWidth: 2,
-      borderColor: "#0077ff",
-      fill: false,
-      pointBackgroundColor: []
-    }] },
-    options: {
-      responsive: true,
-      scales: { y: { beginAtZero: true, max: 100 } }
-    }
+    data: { labels: [], datasets: [{ label: "Rain Intensity (%)", data: [], borderWidth: 2, borderColor: "#0077ff", fill: false, pointBackgroundColor: [] }] },
+    options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } }
   });
 
-  // ---------------------------
-  // Helpers
-  // ---------------------------
   function updateFloodAlert(level){
     let alertBox = document.getElementById("alertBox");
     let alarm = document.getElementById("alarmSound");
@@ -250,8 +239,7 @@
       alertBox.style.background = "red";
       alertBox.style.color = "white";
       alertBox.innerHTML = "CRITICAL: Possible flooding!";
-      // Play alarm if not already playing
-      if (alarm.paused) alarm.play();
+      if(alarm.paused) alarm.play();
     }
   }
 
@@ -268,15 +256,10 @@
 
   function rainPointColor(cls){ return rainClassColor(cls); }
 
-  // ---------------------------
-  // Real-time latest single record (for big card)
-  // ---------------------------
+  // Latest record for main card
   db.ref("flood-data/records").limitToLast(1).on("value", function(snapshot){
     snapshot.forEach(function(child){
       let data = child.val();
-      if (!data) return;
-
-      // Defensive: ensure numeric fields exist
       const dist = parseFloat(data.distance_m || 0);
       const height = parseFloat(data.water_height_m || 0);
       const pct = parseFloat(data.water_percentage || 0);
@@ -286,7 +269,6 @@
       document.getElementById("level").innerHTML = "Distance: " + dist.toFixed(2) + " m";
       document.getElementById("height").innerHTML = "Height: " + height.toFixed(2) + " m";
       document.getElementById("percentage").innerHTML = pct.toFixed(1) + "%";
-
       document.getElementById("rainNow").innerHTML = rain + "%";
       document.getElementById("rainClass").innerHTML = rainClass;
       document.getElementById("rainClass").style.color = rainClassColor(rainClass);
@@ -300,18 +282,14 @@
     });
   });
 
-  // ---------------------------
-  // Main listener: last 20 records -> update table, charts, prediction
-  // ---------------------------
+  // Last 20 records -> update table, charts, prediction
   db.ref("flood-data/records").limitToLast(20).on("value", function(snapshot){
-    // Collect records into array
     let records = [];
     snapshot.forEach(function(child){
       let v = child.val();
-      // ensure we have numeric fields; fallback defaults
       records.push({
         timestamp: Number(v.timestamp || child.key || 0),
-        water_percentage: Number(v.water_percentage || v.waterLevel || 0),
+        water_percentage: Number(v.water_percentage || 0),
         water_height_m: Number(v.water_height_m || 0),
         distance_m: Number(v.distance_m || 0),
         rain_intensity: Number(v.rain_intensity || 0),
@@ -319,182 +297,108 @@
       });
     });
 
-    if (records.length === 0) return;
+    if(records.length===0) return;
 
-    // Sort by timestamp ASC (oldest -> newest)
-    records.sort((a,b) => a.timestamp - b.timestamp);
+    records.sort((a,b)=>a.timestamp-b.timestamp);
 
-    // ---------- Update Table ----------
+    // Update Table
     let table = document.getElementById("dataTable");
-    table.innerHTML = `
-      <tr>
-        <th>Timestamp</th>
-        <th>Water Height (m)</th>
-        <th>Level (%)</th>
-        <th>Rain (%)</th>
-        <th>Rain Class</th>
-      </tr>
-    `;
-    records.forEach(function(r){
-      let date = new Date(r.timestamp * 1000);
-      table.innerHTML += `
-        <tr>
-          <td>${date.toLocaleString()}</td>
-          <td>${r.water_height_m.toFixed(2)}</td>
-          <td>${r.water_percentage.toFixed(1)}%</td>
-          <td>${r.rain_intensity}%</td>
-          <td style="color:${rainClassColor(r.rain_class)}">${r.rain_class}</td>
-        </tr>
-      `;
+    table.innerHTML = `<tr>
+      <th>Timestamp</th><th>Water Height (m)</th><th>Level (%)</th>
+      <th>Rain (%)</th><th>Rain Class</th></tr>`;
+    records.forEach(r=>{
+      let date=new Date(r.timestamp*1000);
+      table.innerHTML+=`<tr>
+        <td>${date.toLocaleString()}</td>
+        <td>${r.water_height_m.toFixed(2)}</td>
+        <td>${r.water_percentage.toFixed(1)}%</td>
+        <td>${r.rain_intensity}%</td>
+        <td style="color:${rainClassColor(r.rain_class)}">${r.rain_class}</td>
+      </tr>`;
     });
 
-    // ---------- Update Charts ----------
-    const timeLabels = records.map(r => {
-      const d = new Date(r.timestamp * 1000);
-      return d.toLocaleTimeString();
-    });
+    // Update Charts
+    const timeLabels=records.map(r=>new Date(r.timestamp*1000).toLocaleTimeString());
+    waterChart.data.labels=[...timeLabels];
+    waterChart.data.datasets[0].data=records.map(r=>r.water_percentage);
+    waterChart.data.datasets[1].data=new Array(records.length).fill(null);
 
-    // set water chart base dataset
-    waterChart.data.labels = [...timeLabels];
-    waterChart.data.datasets[0].data = records.map(r => r.water_percentage);
+    rainChart.data.labels=[...timeLabels];
+    rainChart.data.datasets[0].data=records.map(r=>r.rain_intensity);
+    rainChart.data.datasets[0].pointBackgroundColor=records.map(r=>rainPointColor(r.rain_class));
 
-    // set rain chart
-    rainChart.data.labels = [...timeLabels];
-    rainChart.data.datasets[0].data = records.map(r => r.rain_intensity);
-    rainChart.data.datasets[0].pointBackgroundColor = records.map(r => rainPointColor(r.rain_class));
-
-    // remove previous forecast dataset values, we'll set them below
-    waterChart.data.datasets[1].data = new Array(records.length).fill(null);
-
-    // update charts now (without forecast)
     waterChart.update();
     rainChart.update();
 
-    // ---------- Compute Prediction (with rain factor) ----------
-    // We will perform a linear regression of water_percentage vs time (minutes),
-    // then scale by rainFactor computed from avg rain intensity.
+    // Prediction
+    function computeLinearTrendPrediction(recordsArr, minutesAhead=10){
+      if(recordsArr.length<4) return null;
+      const t0=recordsArr[0].timestamp;
+      const xs=recordsArr.map(r=>(r.timestamp-t0)/60);
+      const ys=recordsArr.map(r=>r.water_percentage);
+      const n=xs.length;
+      let sumX=0,sumY=0,sumXY=0,sumXX=0;
+      for(let i=0;i<n;i++){sumX+=xs[i];sumY+=ys[i];sumXY+=xs[i]*ys[i];sumXX+=xs[i]*xs[i];}
+      const denom=n*sumXX-sumX*sumX;
+      if(denom===0) return null;
+      const slope=(n*sumXY-sumX*sumY)/denom;
+      const intercept=(sumY-slope*sumX)/n;
+      const lastX=xs[xs.length-1];
+      const futureX=lastX+minutesAhead;
+      let predicted=slope*futureX+intercept;
 
-    function computeLinearTrendPrediction(recordsArr, minutesAhead = 10) {
-      if (recordsArr.length < 4) return null;
+      const avgRain=recordsArr.reduce((a,b)=>a+(b.rain_intensity||0),0)/recordsArr.length;
+      let rainFactor=0;
+      if(avgRain<20) rainFactor=0.02;
+      else if(avgRain<50) rainFactor=0.05;
+      else rainFactor=0.10;
+      predicted*=1+rainFactor;
+      predicted=Math.max(0,Math.min(100,predicted));
 
-      // Convert timestamps to minutes relative to first
-      const t0 = recordsArr[0].timestamp;
-      const xs = recordsArr.map(r => (r.timestamp - t0) / 60.0); // minutes
-      const ys = recordsArr.map(r => r.water_percentage);
+      let predictedRainLabel="No / Light";
+      if(avgRain>=50) predictedRainLabel="Heavy Rain";
+      else if(avgRain>=20) predictedRainLabel="Moderate Rain";
 
-      // compute linear regression (slope, intercept)
-      const n = xs.length;
-      let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
-      for (let i = 0; i < n; i++) {
-        sumX += xs[i];
-        sumY += ys[i];
-        sumXY += xs[i] * ys[i];
-        sumXX += xs[i] * xs[i];
-      }
-      const denom = (n * sumXX - sumX * sumX);
-      if (denom === 0) return null;
-      const slope = (n * sumXY - sumX * sumY) / denom; // percent per minute
-      const intercept = (sumY - slope * sumX) / n;
+      let risk="LOW";
+      if(predicted>=80) risk="HIGH";
+      else if(predicted>=50) risk="MEDIUM";
 
-      // predict at future time (last_x + minutesAhead)
-      const lastX = xs[xs.length - 1];
-      const futureX = lastX + minutesAhead;
-      let predicted = slope * futureX + intercept;
-
-      // compute avg rain intensity
-      const avgRain = recordsArr.reduce((a,b) => a + (b.rain_intensity || 0), 0) / recordsArr.length;
-
-      // rainFactor mapping: <20 -> +2%, <50 -> +5%, >=50 -> +10%
-      let rainFactor = 0;
-      if (avgRain < 20) rainFactor = 0.02;
-      else if (avgRain < 50) rainFactor = 0.05;
-      else rainFactor = 0.10;
-
-      predicted = predicted * (1 + rainFactor);
-
-      // clamp
-      predicted = Math.max(0, Math.min(100, predicted));
-
-      // predicted rain label
-      let predictedRainLabel = "No / Light";
-      if (avgRain >= 50) predictedRainLabel = "Heavy Rain";
-      else if (avgRain >= 20) predictedRainLabel = "Moderate Rain";
-
-      // risk
-      let risk = "LOW";
-      if (predicted >= 80) risk = "HIGH";
-      else if (predicted >= 50) risk = "MEDIUM";
-
-      return {
-        predictedValue: predicted,
-        avgRain: avgRain,
-        rainFactor: rainFactor,
-        predictedRainLabel: predictedRainLabel,
-        risk: risk
-      };
+      return {predictedValue:predicted,avgRain:avgRain,predictedRainLabel:predictedRainLabel,risk:risk};
     }
 
-    const pred = computeLinearTrendPrediction(records, 10);
+    const pred=computeLinearTrendPrediction(records,10);
 
-    // ---------- Update Prediction UI ----------
-    const predHeightEl = document.getElementById("predictedHeight");
-    const predRainEl = document.getElementById("predictedRain");
-    const predRiskEl = document.getElementById("predictedRisk");
-    const alarm = document.getElementById("alarmSound");
+    const predHeightEl=document.getElementById("predictedHeight");
+    const predRainEl=document.getElementById("predictedRain");
+    const predRiskEl=document.getElementById("predictedRisk");
+    const alarm=document.getElementById("alarmSound");
 
-    if (!pred) {
-      predHeightEl.innerText = "--";
-      predRainEl.innerText = "--";
-      predRiskEl.innerText = "Unknown";
-    } else {
-      predHeightEl.innerText = pred.predictedValue.toFixed(1) + "%";
-      predRainEl.innerText = pred.predictedRainLabel + " (avg " + pred.avgRain.toFixed(0) + "%)";
-      predRiskEl.innerText = pred.risk;
+    if(!pred){predHeightEl.innerText="--";predRainEl.innerText="--";predRiskEl.innerText="Unknown";}
+    else{
+      predHeightEl.innerText=pred.predictedValue.toFixed(1)+"%";
+      predRainEl.innerText=pred.predictedRainLabel+" (avg "+pred.avgRain.toFixed(0)+"%)";
+      predRiskEl.innerText=pred.risk;
+      predRiskEl.style.color=pred.risk==="LOW"?"green":pred.risk==="MEDIUM"?"orange":"red";
 
-      // color risk label
-      if (pred.risk === "LOW") predRiskEl.style.color = "green";
-      else if (pred.risk === "MEDIUM") predRiskEl.style.color = "orange";
-      else predRiskEl.style.color = "red";
+      if(pred.predictedValue>=80){if(alarm.paused) alarm.play();}
+      else{if(!alarm.paused){alarm.pause();alarm.currentTime=0;}}
 
-      // Play alarm if predicted is critical
-      if (pred.predictedValue >= 80) {
-        if (alarm.paused) alarm.play();
-      } else {
-        if (!alarm.paused) { alarm.pause(); alarm.currentTime = 0; }
-      }
+      // Draw forecast
+      const n=records.length;
+      const forecastData=new Array(n).fill(null);
+      const labelsWithForecast=[...timeLabels,"Forecast"];
+      const forecastSeries=new Array(n+1).fill(null);
+      forecastSeries[n-1]=records[n-1].water_percentage;
+      forecastSeries[n]=pred.predictedValue;
 
-      // ---------- Draw forecast on water chart ----------
-      // We'll create an array with nulls then put last actual and predicted values
-      const n = records.length;
-      const forecastData = new Array(n).fill(null);
-      // place predicted at last index (aligned to a "Forecast" label we'll add temporarily)
-      // Chart labels: original labels + "Forecast"
-      const labelsWithForecast = [...timeLabels];
-      labelsWithForecast.push("Forecast");
-
-      // prepare forecast dataset: leave nulls for existing indices, then put last actual and prediction
-      // For a connecting line from last actual to forecast, include last actual at index (n-1) and predicted at index n
-      const forecastSeries = new Array(n + 1).fill(null);
-      // last actual:
-      forecastSeries[n - 1] = records[n - 1].water_percentage;
-      // predicted point:
-      forecastSeries[n] = pred.predictedValue;
-
-      // Update chart labels and datasets
-      waterChart.data.labels = labelsWithForecast;
-      // ensure main dataset has one extra null appended so it aligns with labels
-      const mainSeries = records.map(r => r.water_percentage);
+      const mainSeries=records.map(r=>r.water_percentage);
       mainSeries.push(null);
-      waterChart.data.datasets[0].data = mainSeries;
-
-      // set forecast dataset to forecastSeries
-      waterChart.data.datasets[1].data = forecastSeries;
-
+      waterChart.data.labels=labelsWithForecast;
+      waterChart.data.datasets[0].data=mainSeries;
+      waterChart.data.datasets[1].data=forecastSeries;
       waterChart.update();
     }
-
-  }); // end main listener
-
+  });
 </script>
 </body>
 </html>
