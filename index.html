@@ -15,22 +15,31 @@
     body {
       font-family: Arial, sans-serif;
       background: #f0f6ff;
-      text-align: center;
       padding: 20px;
+      text-align: center;
     }
 
     h1 { color: #003366; }
 
-    /* Main card */
+    /* Container for side-by-side layout */
+    .dashboard-container {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      flex-wrap: wrap;
+      margin-bottom: 40px;
+    }
+
+    /* Current Water Level Card */
     .card {
       background: white;
-      width: 500px;
-      max-width: 90%;
-      margin: 20px auto;
-      padding: 25px;
+      width: 480px;
+      min-width: 300px;
+      padding: 30px;
       border-radius: 15px;
-      box-shadow: 0px 0px 12px #c3c3c3;
+      box-shadow: 0px 0px 15px #c3c3c3;
       font-size: 18px;
+      flex: 1;
     }
 
     #level, #percentage, #rainNow, #rainClass {
@@ -51,9 +60,40 @@
       margin-top: 10px;
     }
 
+    /* Water Level + Forecast Card */
+    .graph-box {
+      background: white;
+      width: 600px;
+      min-width: 300px;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0px 0px 15px #c3c3c3;
+      flex: 1;
+    }
+
+    #predictionPanel {
+      margin-top: 20px;
+      padding: 18px;
+      border-radius: 12px;
+      background: #f9f9f9;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      font-size: 18px;
+    }
+
+    #predictionPanel p { margin: 6px 0; }
+    #predictionPanel strong { font-size: 20px; }
+
+    #waterChart {
+      height: 400px !important;
+    }
+
+    #rainChart {
+      height: 300px !important;
+    }
+
     #alertBox {
       width: 90%;
-      max-width: 1000px;
+      max-width: 1200px;
       margin: 20px auto;
       padding: 15px;
       font-size: 26px;
@@ -68,44 +108,6 @@
       0% { transform: scale(1); }
       50% { transform: scale(1.05); }
       100% { transform: scale(1); }
-    }
-
-    .graph-container {
-      display: flex;
-      justify-content: center;
-      gap: 30px;
-      margin-top: 30px;
-      flex-wrap: wrap;
-    }
-
-    .graph-box {
-      width: 90%;
-      max-width: 1000px;
-      background: white;
-      padding: 25px;
-      border-radius: 15px;
-      box-shadow: 0px 0px 12px #c3c3c3;
-      margin: 20px auto;
-    }
-
-    #predictionPanel {
-      margin-top: 20px;
-      padding: 18px;
-      border-radius: 12px;
-      background: #f9f9f9;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      font-size: 18px;
-    }
-
-    #predictionPanel p { margin: 6px 0; font-size: 18px; }
-    #predictionPanel strong { font-size: 20px; }
-
-    #waterChart {
-      height: 400px !important;
-    }
-
-    #rainChart {
-      height: 300px !important;
     }
 
     table {
@@ -134,31 +136,33 @@
   <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" type="audio/ogg">
 </audio>
 
-<!-- Main Dashboard Card -->
-<div class="card">
-  <p>Current Water Level</p>
-  <p id="level">--</p>
-  <p id="height">--</p>
-  <p id="percentage">--</p>
+<!-- Side-by-side container -->
+<div class="dashboard-container">
+  <!-- Current Water Level -->
+  <div class="card">
+    <p>Current Water Level</p>
+    <p id="level">--</p>
+    <p id="height">--</p>
+    <p id="percentage">--</p>
 
-  <p>Rain Intensity</p>
-  <p id="rainNow">--</p>
-  <p id="rainClass">--</p>
+    <p>Rain Intensity</p>
+    <p id="rainNow">--</p>
+    <p id="rainClass">--</p>
 
-  <p id="time">Loading...</p>
-</div>
+    <p id="time">Loading...</p>
+  </div>
 
-<!-- ENLARGED WATER LEVEL + FORECAST CONTAINER -->
-<div class="graph-box">
-  <h3 style="margin-bottom:10px;">Water Level (%) & Forecast</h3>
-  <canvas id="waterChart"></canvas>
+  <!-- Water Level + Forecast -->
+  <div class="graph-box">
+    <h3 style="margin-bottom:10px;">Water Level (%) & Forecast</h3>
+    <canvas id="waterChart"></canvas>
 
-  <!-- PREDICTION BOX -->
-  <div id="predictionPanel">
-    <h3 style="margin:0 0 10px 0;">⏳ Forecast (next ~10 minutes)</h3>
-    <p><strong>Predicted Water Level:</strong> <span id="predictedHeight">--</span></p>
-    <p><strong>Predicted Rain Condition:</strong> <span id="predictedRain">--</span></p>
-    <p><strong>Flood Risk Level:</strong> <span id="predictedRisk">--</span></p>
+    <div id="predictionPanel">
+      <h3 style="margin:0 0 10px 0;">⏳ Forecast (next ~10 minutes)</h3>
+      <p><strong>Predicted Water Level:</strong> <span id="predictedHeight">--</span></p>
+      <p><strong>Predicted Rain Condition:</strong> <span id="predictedRain">--</span></p>
+      <p><strong>Flood Risk Level:</strong> <span id="predictedRisk">--</span></p>
+    </div>
   </div>
 </div>
 
@@ -180,7 +184,6 @@
 </table>
 
 <script>
-  // Firebase config
   var firebaseConfig = {
     apiKey: "AIzaSyDcAn84EYf0U26ubggBl5TOHkEFzHTiVnM",
     authDomain: "geoai-flood-control.firebaseapp.com",
@@ -193,19 +196,15 @@
   firebase.initializeApp(firebaseConfig);
   var db = firebase.database();
 
-  // Charts
   const waterChartCtx = document.getElementById("waterChart").getContext("2d");
   const rainChartCtx = document.getElementById("rainChart").getContext("2d");
 
   let waterChart = new Chart(waterChartCtx, {
     type: "line",
-    data: {
-      labels: [],
-      datasets: [
-        { label: "Water Level (%)", data: [], borderWidth: 2, borderColor: "#1e88e5", fill: false },
-        { label: "Forecast", data: [], borderWidth: 2, borderColor: "#d81b60", fill: false, borderDash: [6,4], pointRadius: 6 }
-      ]
-    },
+    data: { labels: [], datasets: [
+      { label: "Water Level (%)", data: [], borderWidth: 2, borderColor: "#1e88e5", fill: false },
+      { label: "Forecast", data: [], borderWidth: 2, borderColor: "#d81b60", fill: false, borderDash: [6,4], pointRadius: 6 }
+    ]},
     options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } }
   });
 
@@ -216,31 +215,13 @@
   });
 
   function updateFloodAlert(level){
-    let alertBox = document.getElementById("alertBox");
-    let alarm = document.getElementById("alarmSound");
-    alertBox.style.display = "block";
-
-    if(level < 40){
-      alertBox.style.background = "green";
-      alertBox.style.color = "white";
-      alertBox.innerHTML = "SAFE: Water level normal.";
-      alarm.pause(); alarm.currentTime = 0;
-    } else if(level < 60){
-      alertBox.style.background = "yellow";
-      alertBox.style.color = "black";
-      alertBox.innerHTML = "ADVISORY: Stay alert.";
-      alarm.pause(); alarm.currentTime = 0;
-    } else if(level < 80){
-      alertBox.style.background = "orange";
-      alertBox.style.color = "black";
-      alertBox.innerHTML = "WARNING: Water rising!";
-      alarm.pause(); alarm.currentTime = 0;
-    } else {
-      alertBox.style.background = "red";
-      alertBox.style.color = "white";
-      alertBox.innerHTML = "CRITICAL: Possible flooding!";
-      if(alarm.paused) alarm.play();
-    }
+    let alertBox=document.getElementById("alertBox");
+    let alarm=document.getElementById("alarmSound");
+    alertBox.style.display="block";
+    if(level<40){ alertBox.style.background="green"; alertBox.style.color="white"; alertBox.innerHTML="SAFE: Water level normal."; alarm.pause(); alarm.currentTime=0;}
+    else if(level<60){ alertBox.style.background="yellow"; alertBox.style.color="black"; alertBox.innerHTML="ADVISORY: Stay alert."; alarm.pause(); alarm.currentTime=0;}
+    else if(level<80){ alertBox.style.background="orange"; alertBox.style.color="black"; alertBox.innerHTML="WARNING: Water rising!"; alarm.pause(); alarm.currentTime=0;}
+    else { alertBox.style.background="red"; alertBox.style.color="white"; alertBox.innerHTML="CRITICAL: Possible flooding!"; if(alarm.paused) alarm.play();}
   }
 
   function rainClassColor(cls){
@@ -253,59 +234,47 @@
       default: return "black";
     }
   }
-
   function rainPointColor(cls){ return rainClassColor(cls); }
 
-  // Latest record for main card
   db.ref("flood-data/records").limitToLast(1).on("value", function(snapshot){
     snapshot.forEach(function(child){
-      let data = child.val();
-      const dist = parseFloat(data.distance_m || 0);
-      const height = parseFloat(data.water_height_m || 0);
-      const pct = parseFloat(data.water_percentage || 0);
-      const rain = parseInt(data.rain_intensity || 0);
-      const rainClass = data.rain_class || "No Rain";
+      let data=child.val();
+      const dist=parseFloat(data.distance_m||0);
+      const height=parseFloat(data.water_height_m||0);
+      const pct=parseFloat(data.water_percentage||0);
+      const rain=parseInt(data.rain_intensity||0);
+      const rainClass=data.rain_class||"No Rain";
 
-      document.getElementById("level").innerHTML = "Distance: " + dist.toFixed(2) + " m";
-      document.getElementById("height").innerHTML = "Height: " + height.toFixed(2) + " m";
-      document.getElementById("percentage").innerHTML = pct.toFixed(1) + "%";
-      document.getElementById("rainNow").innerHTML = rain + "%";
-      document.getElementById("rainClass").innerHTML = rainClass;
-      document.getElementById("rainClass").style.color = rainClassColor(rainClass);
+      document.getElementById("level").innerHTML="Distance: "+dist.toFixed(2)+" m";
+      document.getElementById("height").innerHTML="Height: "+height.toFixed(2)+" m";
+      document.getElementById("percentage").innerHTML=pct.toFixed(1)+"%";
+      document.getElementById("rainNow").innerHTML=rain+"%";
+      document.getElementById("rainClass").innerHTML=rainClass;
+      document.getElementById("rainClass").style.color=rainClassColor(rainClass);
 
       updateFloodAlert(pct);
-
-      if (data.timestamp) {
-        let date = new Date(data.timestamp * 1000);
-        document.getElementById("time").innerHTML = date.toLocaleString();
-      }
+      if(data.timestamp){document.getElementById("time").innerHTML=new Date(data.timestamp*1000).toLocaleString();}
     });
   });
 
-  // Last 20 records -> update table, charts, prediction
+  // Last 20 records -> table, charts, prediction
   db.ref("flood-data/records").limitToLast(20).on("value", function(snapshot){
-    let records = [];
-    snapshot.forEach(function(child){
-      let v = child.val();
-      records.push({
-        timestamp: Number(v.timestamp || child.key || 0),
-        water_percentage: Number(v.water_percentage || 0),
-        water_height_m: Number(v.water_height_m || 0),
-        distance_m: Number(v.distance_m || 0),
-        rain_intensity: Number(v.rain_intensity || 0),
-        rain_class: v.rain_class || "No Rain"
-      });
-    });
+    let records=[];
+    snapshot.forEach(function(child){let v=child.val();records.push({
+      timestamp:Number(v.timestamp||child.key||0),
+      water_percentage:Number(v.water_percentage||0),
+      water_height_m:Number(v.water_height_m||0),
+      distance_m:Number(v.distance_m||0),
+      rain_intensity:Number(v.rain_intensity||0),
+      rain_class:v.rain_class||"No Rain"
+    });});
 
     if(records.length===0) return;
-
     records.sort((a,b)=>a.timestamp-b.timestamp);
 
-    // Update Table
-    let table = document.getElementById("dataTable");
-    table.innerHTML = `<tr>
-      <th>Timestamp</th><th>Water Height (m)</th><th>Level (%)</th>
-      <th>Rain (%)</th><th>Rain Class</th></tr>`;
+    // Table
+    let table=document.getElementById("dataTable");
+    table.innerHTML=`<tr><th>Timestamp</th><th>Water Height (m)</th><th>Level (%)</th><th>Rain (%)</th><th>Rain Class</th></tr>`;
     records.forEach(r=>{
       let date=new Date(r.timestamp*1000);
       table.innerHTML+=`<tr>
@@ -317,7 +286,7 @@
       </tr>`;
     });
 
-    // Update Charts
+    // Charts
     const timeLabels=records.map(r=>new Date(r.timestamp*1000).toLocaleTimeString());
     waterChart.data.labels=[...timeLabels];
     waterChart.data.datasets[0].data=records.map(r=>r.water_percentage);
@@ -330,7 +299,7 @@
     waterChart.update();
     rainChart.update();
 
-    // Prediction
+    // Prediction (linear trend + rain factor)
     function computeLinearTrendPrediction(recordsArr, minutesAhead=10){
       if(recordsArr.length<4) return null;
       const t0=recordsArr[0].timestamp;
@@ -383,16 +352,13 @@
       if(pred.predictedValue>=80){if(alarm.paused) alarm.play();}
       else{if(!alarm.paused){alarm.pause();alarm.currentTime=0;}}
 
-      // Draw forecast
+      // Draw forecast line
       const n=records.length;
-      const forecastData=new Array(n).fill(null);
-      const labelsWithForecast=[...timeLabels,"Forecast"];
       const forecastSeries=new Array(n+1).fill(null);
-      forecastSeries[n-1]=records[n-1].water_percentage;
       forecastSeries[n]=pred.predictedValue;
-
       const mainSeries=records.map(r=>r.water_percentage);
       mainSeries.push(null);
+      const labelsWithForecast=[...timeLabels,"Forecast"];
       waterChart.data.labels=labelsWithForecast;
       waterChart.data.datasets[0].data=mainSeries;
       waterChart.data.datasets[1].data=forecastSeries;
