@@ -286,7 +286,7 @@
   // We'll store the last records here and use them both on immediate update and periodic prediction.
   let lastRecords = [];
 
-  db.ref("flood-data/records").limitToLast(500).on("value", function(snapshot){
+  db.ref("flood-data/records").limitToLast(300).on("value", function(snapshot){
     let records = [];
     snapshot.forEach(function(child){
       let v = child.val();
