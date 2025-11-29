@@ -162,7 +162,7 @@
 
   <!-- Forecast -->
   <div class="forecast-card">
-    <h3>⏳ Forecast (next ~10 minutes)</h3>
+    <h3>⏳ Forecast (next every minute)</h3>
     <div id="predictionPanel">
       <p><strong>Predicted Water Level:</strong> <span id="predictedHeight">--</span></p>
       <p><strong>Predicted Rain Condition:</strong> <span id="predictedRain">--</span></p>
@@ -286,7 +286,7 @@
   // We'll store the last records here and use them both on immediate update and periodic prediction.
   let lastRecords = [];
 
-  db.ref("flood-data/records").limitToLast(20).on("value", function(snapshot){
+  db.ref("flood-data/records").limitToLast(50).on("value", function(snapshot){
     let records = [];
     snapshot.forEach(function(child){
       let v = child.val();
